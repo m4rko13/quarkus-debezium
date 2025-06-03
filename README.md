@@ -4,12 +4,36 @@ A complete demonstration of **Event-Driven Architecture** using Quarkus and Debe
 
 ## ⚡ Quick Start
 
-### Two-Command Setup
+### ✨ Containerized Setup (No Local Java Required!)
 ```bash
-# 1. Setup everything (requires sudo for Docker)
+# Setup everything (Docker only!)
 sudo ./setup.sh
 
-# 2. Test the demo
+# Test the demo
+./test.sh
+```
+
+### 🛠️ Alternative: Make Commands
+```bash
+# See all available commands
+make help
+
+# Start everything
+make start
+
+# Run tests
+make test
+
+# View logs
+make logs
+```
+
+### 📊 Legacy Setup (Requires Local Java/Maven)
+```bash
+# If you need the old way with local Java/Maven
+./setup-legacy.sh
+
+# Test the demo
 ./test.sh
 ```
 
@@ -30,8 +54,12 @@ This project demonstrates how to implement the **Outbox Pattern** with:
 
 ## 📋 Prerequisites
 
+### ✨ Default Mode (Recommended)
+- **Docker & Docker Compose** only!
+
+### 📊 Legacy Mode (Optional)
 - **Docker & Docker Compose**
-- **Java 21+**
+- **Java 21+** 
 - **Maven 3.8+**
 
 ## 🧪 What The Test Shows

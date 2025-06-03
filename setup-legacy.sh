@@ -1,46 +1,56 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Quarkus Debezium Demo Setup (Containerized)"
-echo "=============================================="
+echo "🚀 Quarkus Debezium Demo Setup"
+echo "==============================="
 
 # Check if running with sudo for docker commands
 if [ "$EUID" -ne 0 ]; then
     echo "⚠️  This script requires sudo for Docker commands"
     echo "   Please run: sudo ./setup.sh"
-    echo ""
-    echo "   Alternative: Add user to docker group first:"
-    echo "   sudo usermod -aG docker $USER && newgrp docker"
     exit 1
 fi
 
-# Check prerequisites - only Docker needed now!
+# Check prerequisites
 echo "1️⃣ Checking prerequisites..."
 if ! command -v docker &> /dev/null; then
     echo "❌ Docker is required but not installed"
     exit 1
 fi
 
-if ! docker compose version &> /dev/null; then
-    echo "❌ Docker Compose is required but not available"
+if ! command -v java &> /dev/null; then
+    echo "❌ Java is required but not installed"
     exit 1
 fi
 
-echo "✅ Prerequisites met (Docker only!)"
+echo "✅ Prerequisites met"
 
 # Stop any existing services and clean
 echo ""
 echo "2️⃣ Cleaning up existing setup..."
 docker compose down 2>/dev/null || true
+rm -rf target/
 
-# Build and start services
+# Build application
 echo ""
-echo "3️⃣ Building and starting all services (including Java build)..."
-echo "   This may take a few minutes on first run..."
+echo "3️⃣ Building Quarkus application..."
+export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
+sudo -u $(logname) JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 ./mvnw clean package -q -DskipTests
+
+if [ $? -ne 0 ]; then
+    echo "❌ Maven build failed"
+    exit 1
+fi
+
+echo "✅ Application built successfully"
+
+# Start services
+echo ""
+echo "4️⃣ Starting Docker services..."
 docker compose up -d --build
 
 echo ""
-echo "4️⃣ Waiting for services to start..."
+echo "5️⃣ Waiting for services to start..."
 echo "   This may take 60-90 seconds..."
 
 # Wait for PostgreSQL
@@ -76,15 +86,16 @@ for i in {1..60}; do
     if [ $i -eq 60 ]; then echo "❌ Timeout"; exit 1; fi
 done
 
-# Wait for Quarkus App (more generous timeout for first build)
+# Wait for Quarkus App (more generous timeout)
 echo -n "   Quarkus App: "
-for i in {1..120}; do
+for i in {1..60}; do
+    # Try both health endpoints
     if curl -sf http://localhost:8081/q/health >/dev/null 2>&1 || curl -sf http://localhost:8081/ >/dev/null 2>&1; then
         echo "✅"
         break
     fi
     sleep 3
-    if [ $i -eq 120 ]; then 
+    if [ $i -eq 60 ]; then 
         echo "❌ Timeout"
         echo ""
         echo "🐛 Quarkus logs:"
@@ -97,9 +108,10 @@ done
 
 # Setup Debezium Connector
 echo ""
-echo "5️⃣ Setting up Debezium connector..."
-sleep 10
+echo "6️⃣ Setting up Debezium connector..."
+sleep 10  # Additional wait for connector registration
 
+# Check if connector exists and is running
 connector_status=$(curl -s http://localhost:8083/connectors/simple-connector/status 2>/dev/null | jq -r '.connector.state' 2>/dev/null || echo "NOT_FOUND")
 
 if [ "$connector_status" != "RUNNING" ]; then
@@ -148,9 +160,6 @@ echo "   • Quarkus App:    http://localhost:8081"
 echo "   • Kafka UI:       http://localhost:8080" 
 echo "   • Debezium API:   http://localhost:8083"
 echo "   • PostgreSQL:     localhost:5432"
-echo ""
-echo "💡 No local Java/Maven installation required!"
-echo "   Everything runs in Docker containers."
 echo ""
 echo "🧪 Run the demo test:"
 echo "   ./test.sh"

@@ -73,7 +73,7 @@ services:
   quarkus-app:
     build:
       context: .
-      dockerfile: src/main/docker/Dockerfile.jvm
+      dockerfile: Dockerfile.build
     depends_on:
       postgres:
         condition: service_healthy
